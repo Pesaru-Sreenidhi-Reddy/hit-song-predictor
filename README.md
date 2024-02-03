@@ -1,4 +1,4 @@
-### executing code process
+### Process for executing the code:
 Run jupyter notebook.
 
 
