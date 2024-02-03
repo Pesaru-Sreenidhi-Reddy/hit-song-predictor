@@ -2,4 +2,4 @@
 Run python notebook.
 
 
-Then run flask application using: FLASK_APP=app.py flask run
+Then run flask application using: FLASK_APP=app.py flask run.
