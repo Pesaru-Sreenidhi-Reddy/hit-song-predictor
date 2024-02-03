@@ -1,5 +1,5 @@
-# hit-song-predictor
-Run python notebook.
+### executing code process
+Run jupyter notebook.
 
 
-Then run flask application using: FLASK_APP=app.py flask run.
+Then run flask application by typing in : FLASK_APP=app.py flask run in the terminal.
