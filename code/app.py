@@ -1,15 +1,16 @@
 from flask import Flask, request, jsonify, render_template
+from spotipy.oauth2 import SpotifyClientCredentials
 
 import scipy.signal as signal
 import joblib
 import numpy as np
 import sklearn
 import pandas as pd
-
+import spotipy
 import librosa
 import requests
-
-
+import os
+import io
 
 app = Flask(__name__)
 
@@ -45,14 +46,66 @@ def calculate_valence(audio_file):
     valence= np.sum(feature_mean)  # Example calculation
 
     return valence   
+@app.route("/track.html", methods=['GET'])
+def track_form():
+    return render_template('track.html')
 
-
-    
-@app.route("/", methods=['GET'])
-def Home():
+@app.route("/audio.html", methods=['GET'])
+def audio_form():
     return render_template('audio.html')
+    
+@app.route("/")
+def Home():
+    return render_template('home.html')
 
-
+@app.route('/input_trackid', methods=['POST'])
+def input_trackid():
+    client_id = '82b4859cdb7542d6a4e8b380b486f6e9'
+    client_secret = '51c5d7378ae146b6a4d360833099fbe2'
+    client_credentials_manager = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
+    sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
+    if request.method == 'POST':
+        trackid = request.form['trackid']
+        if trackid:
+        # Get audio features
+            audio_features = sp.audio_features(tracks=[trackid])
+            input_variables = pd.DataFrame(audio_features)
+            track_info = sp.track(trackid)
+            track_preview_url = track_info['preview_url'] if 'preview_url' in track_info else None
+            if track_preview_url:
+                audio_file_path = 'audio_preview.mp3'  
+                with open(audio_file_path, 'wb') as f:
+                    response = requests.get(track_preview_url)
+                    f.write(response.content)
+                y, sr = librosa.load(audio_file_path)
+                onset_env = librosa.onset.onset_strength(y=y, sr=sr)
+                tempo, beats = librosa.beat.beat_track(onset_envelope=onset_env, sr=sr)
+                beat_times = librosa.frames_to_time(beats, sr=sr)
+                chorus_hit = beat_times[0] if len(beat_times) > 0 else None
+                sections = len(librosa.effects.split(y))
+                input_variables['chorus_hit'] = chorus_hit  
+                input_variables['sections'] = sections
+            else: 
+                default_chorus_hit = input_variables['duration_ms'] / 2 
+                input_variables['chorus_hit'] = default_chorus_hit 
+                input_variables['sections'] = 6
+            
+            # Select relevant columns for prediction
+            selected_columns = ['danceability','energy',	'key',	'loudness',	'mode'	,'speechiness'	,'acousticness',	'instrumentalness',	'liveness',	'valence',	'tempo'	,'duration_ms'	,'time_signature','chorus_hit','sections']
+            input_variables = input_variables[selected_columns]
+            input_variables = input_variables.apply(pd.to_numeric, errors='coerce')
+            pd.set_option('display.max_columns', None)
+            print(input_variables)
+            prediction = xgbmodel.predict(input_variables)
+            output = int(prediction[0])
+            if output==1:
+                print("Congratulations, your song is hit")
+                return render_template('track.html',prediction_texts="Congratulations, your song has a high chance of making it onto the Billboard Hot 100 list.")
+            else:
+                print("Sorry, your song has less chance to get onto billBoard Hot 100")
+                return render_template('track.html', prediction_texts="Sorry, chance of getting this song on Billboard Hot 100 list is low")
+    else:
+        return render_template('track.html',prediction_texts="Something went wrong!")
 
 @app.route('/upload_audio', methods=['POST'])
 def upload_audio():
@@ -60,7 +113,7 @@ def upload_audio():
             file = request.files['file']
             #calculation of features
             if file:
-                audio_file_path =   file.filename 
+                audio_file_path = 'uploads/' + file.filename  # Adjust the path as needed
                 file.save(audio_file_path)
                 y, sr = librosa.load(audio_file_path)
                 onset_env = librosa.onset.onset_strength(y=y, sr=sr)

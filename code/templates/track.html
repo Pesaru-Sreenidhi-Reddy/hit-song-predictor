@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hit Predictor - Track input</title>
+    <link rel="stylesheet" href="{{url_for('static',filename='css/style.css')}}">
+    
+    <h1 id="mainhead">WILL YOUR SONG MAKE IT TO THE LIST?</h1>
+    
+</head>
+
+
+
+<body id="bodydiv">
+
+    <div>
+        <form action="{{ url_for('input_trackid')}}" method="post">
+            
+            <div>
+            <h3>TRACK ID</h3>
+            <input id="track" name="trackid" step="any" required='required' class="textbox-style">
+            </div>
+            <br>Track ID is found in the url of spotify song.<br>It is found after track/ in url
+            <br><br><br><button id="sub" type="submit ">HIT OR MISS?
+            </button>
+            <br>
+
+        </form>
+
+        <br><h2 id="pred">{{ prediction_texts }}<h2>
+        
+            <a href="audio.html">Upload audio</a>
+
+    </div>
+ 
+</body>
+
+</html>
